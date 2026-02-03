@@ -1,0 +1,286 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+  password      String?
+  phone         String?
+  role          String    @default("user")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  bookings      Booking[]
+  enrollments   Enrollment[]
+  lessonProgress LessonProgress[]
+  newsletterSubscriptions NewsletterSubscription[]
+  communityThreads CommunityThread[]
+  communityReplies CommunityReply[]
+  replyLikes    ReplyLike[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// Booking models
+model ClassType {
+  id          String    @id @default(cuid())
+  name        String
+  description String
+  price       Float
+  duration    String
+  maxStudents Int
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  bookings Booking[]
+
+  @@map("class_types")
+}
+
+model Booking {
+  id          String    @id @default(cuid())
+  userId      String
+  classTypeId String
+  scheduledAt DateTime
+  totalPrice  Float
+  status      String    @default("PENDING")
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  classType ClassType @relation(fields: [classTypeId], references: [id], onDelete: Cascade)
+
+  @@map("bookings")
+}
+
+// Blog models
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  excerpt     String
+  content     String
+  author      String
+  category    String
+  tags        String[]
+  thumbnail   String?
+  isPublished Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("blog_posts")
+}
+
+// Newsletter model
+model NewsletterSubscription {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String?
+  userId      String?
+  isActive    Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+  unsubscribedAt DateTime?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("newsletter_subscriptions")
+}
+
+// Course models
+model Course {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  instructor      String
+  instructorBio   String
+  thumbnail       String?
+  price           Float
+  duration        String
+  level           String
+  category        String
+  whatYouWillLearn String[]
+  requirements    String[]
+  isPublished     Boolean  @default(false)
+  studentCount    Int      @default(0)
+  rating          Float    @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  modules      Module[]
+  enrollments  Enrollment[]
+
+  @@map("courses")
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  description String
+  order       Int
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  course  Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  lessons Lesson[]
+
+  @@map("modules")
+}
+
+model Lesson {
+  id          String   @id @default(cuid())
+  moduleId    String
+  title       String
+  description String
+  videoUrl    String?
+  duration    String
+  order       Int
+  isFree      Boolean  @default(false)
+  transcript  String?
+  resources   Json?
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  module   Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  progress LessonProgress[]
+
+  @@map("lessons")
+}
+
+model Enrollment {
+  id        String   @id @default(cuid())
+  userId    String
+  courseId  String
+  progress  Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+  @@map("enrollments")
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  lessonId    String
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lesson Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId])
+  @@map("lesson_progress")
+}
+
+// Community models
+model CommunityThread {
+  id           String   @id @default(cuid())
+  title        String
+  content      String
+  authorId     String
+  category     String
+  isPinned     Boolean  @default(false)
+  isLocked     Boolean  @default(false)
+  viewCount    Int      @default(0)
+  lastActivity DateTime @default(now())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  author  User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  replies CommunityReply[]
+
+  @@map("community_threads")
+}
+
+model CommunityReply {
+  id        String   @id @default(cuid())
+  content   String
+  authorId  String
+  threadId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  author User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  thread CommunityThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  likes  ReplyLike[]
+
+  @@map("community_replies")
+}
+
+model ReplyLike {
+  id        String   @id @default(cuid())
+  userId    String
+  replyId   String
+  createdAt DateTime @default(now())
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reply CommunityReply @relation(fields: [replyId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, replyId])
+  @@map("reply_likes")
+}
