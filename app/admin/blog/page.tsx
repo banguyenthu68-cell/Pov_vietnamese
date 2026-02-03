@@ -189,7 +189,7 @@ export default function AdminBlogPage() {
                       }`}
                     >
                       {post.isPublished ? 'Unpublish' : 'Publish'}
-                    </Link>
+                    </button>
                     <Link
                       href={`/blog/${post.slug}`}
                       className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 text-center text-sm"
